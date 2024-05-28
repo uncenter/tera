@@ -368,6 +368,18 @@ pub fn split(value: &Value, args: &HashMap<String, Value>) -> Result<Value> {
     Ok(to_value(s.split(&pat).collect::<Vec<_>>()).unwrap())
 }
 
+/// Repeat the given string n number of times.
+pub fn repeat(value: &Value, args: &HashMap<String, Value>) -> Result<Value> {
+    let s: String = try_get_value!("repeat", "value", String, value);
+
+    let n = match args.get("n") {
+        Some(n) => try_get_value!("repeat", "n", usize, n),
+        None => return Err(Error::msg("Filter `repeat` expected an arg called `n`")),
+    };
+
+    Ok(to_value(std::iter::repeat(s.clone()).take(n).collect::<Vec<_>>()).unwrap())
+}
+
 /// Convert the value to a signed integer number
 pub fn int(value: &Value, args: &HashMap<String, Value>) -> Result<Value> {
     let default = match args.get("default") {
@@ -802,6 +814,25 @@ mod tests {
             args.insert("pat".to_string(), to_value(pat).unwrap());
             let result = split(&to_value(input).unwrap(), &args).unwrap();
             let result = result.as_array().unwrap();
+            assert_eq!(result.len(), expected.len());
+            for (result, expected) in result.iter().zip(expected.iter()) {
+                assert_eq!(result, expected);
+            }
+        }
+    }
+
+    #[test]
+    fn test_repeat() {
+        let tests: Vec<(&str, usize, &[&str])> = vec![
+            ("abc", 2, &["abc", "abc"]),
+            ("abc", 0, &[]),
+            ("123", 4, &["123", "123", "123", "123"]),
+        ];
+        for (input, n, expected) in tests {
+            let mut args = HashMap::new();
+            args.insert("n".to_string(), to_value(n).unwrap());
+            let result = repeat(&to_value(input).unwrap(), &args).unwrap();
+            let result: &Vec<Value> = result.as_array().unwrap();
             assert_eq!(result.len(), expected.len());
             for (result, expected) in result.iter().zip(expected.iter()) {
                 assert_eq!(result, expected);
